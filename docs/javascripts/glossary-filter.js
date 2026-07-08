@@ -1,117 +1,97 @@
-// Category/Tags 컬럼이 있는 표(용어집)에 클릭형 필터를 붙인다.
-// 소스 repo의 GLOSSARY.md 형식을 그대로 이용하므로, 콘텐츠 쪽은 손댈 필요가 없다.
+// GLOSSARY.md는 항상 "Category | 설명" 표(카테고리 인덱스)가 먼저 나오고
+// 그 아래 "Term | ... | Category | ... " 표(전체 용어)가 이어진다.
+// 인덱스 표의 카테고리 이름을 클릭하면 아래 용어 표를 그 카테고리로 필터링한다.
+// 태그 기반 필터는 태그 수가 너무 많아 오히려 산만해서 카테고리만 남겼다.
 (function () {
   function textOf(cell) {
     return cell ? cell.textContent.trim() : "";
   }
 
-  function buildFilter(table) {
-    var headerCells = table.querySelectorAll("thead th");
-    if (!headerCells.length) return;
+  function findTables() {
+    var tables = document.querySelectorAll("article table");
+    var indexTable = null;
+    var termsTable = null;
 
-    var headers = Array.prototype.map.call(headerCells, textOf);
-    var categoryIdx = headers.indexOf("Category");
-    var tagsIdx = headers.indexOf("Tags");
-    if (categoryIdx === -1 || tagsIdx === -1) return;
-
-    var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
-    if (!rows.length) return;
-
-    var categories = new Set();
-    var tags = new Set();
-    rows.forEach(function (row) {
-      var cells = row.children;
-      var cat = textOf(cells[categoryIdx]);
-      if (cat) categories.add(cat);
-      textOf(cells[tagsIdx]).split(",").forEach(function (t) {
-        t = t.trim();
-        if (t) tags.add(t);
-      });
+    tables.forEach(function (table) {
+      var headers = Array.prototype.map.call(table.querySelectorAll("thead th"), textOf);
+      if (headers.length === 2 && headers[0] === "Category" && headers[1] === "설명") {
+        indexTable = table;
+      } else if (headers.indexOf("Category") !== -1 && headers.indexOf("Term") !== -1) {
+        termsTable = table;
+      }
     });
 
-    var active = new Set();
-    var bar = document.createElement("div");
-    bar.className = "glossary-filter";
-
-    var countEl = document.createElement("span");
-    countEl.className = "glossary-filter__count";
-
-    function applyFilter() {
-      var shown = 0;
-      rows.forEach(function (row) {
-        var cells = row.children;
-        var cat = textOf(cells[categoryIdx]);
-        var rowTags = textOf(cells[tagsIdx]).split(",").map(function (t) {
-          return t.trim();
-        });
-        var visible =
-          active.size === 0 ||
-          active.has("cat:" + cat) ||
-          rowTags.some(function (t) {
-            return active.has("tag:" + t);
-          });
-        row.style.display = visible ? "" : "none";
-        if (visible) shown++;
-      });
-      countEl.textContent = shown + " / " + rows.length + "개 표시 중";
-    }
-
-    function makeChip(label, key) {
-      var chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "glossary-filter__chip";
-      chip.textContent = label;
-      chip.addEventListener("click", function () {
-        if (active.has(key)) {
-          active.delete(key);
-          chip.classList.remove("glossary-filter__chip--active");
-        } else {
-          active.add(key);
-          chip.classList.add("glossary-filter__chip--active");
-        }
-        applyFilter();
-      });
-      return chip;
-    }
-
-    function makeGroup(label, values, prefix) {
-      var group = document.createElement("div");
-      group.className = "glossary-filter__group";
-      var groupLabel = document.createElement("span");
-      groupLabel.className = "glossary-filter__label";
-      groupLabel.textContent = label;
-      group.appendChild(groupLabel);
-      Array.from(values)
-        .sort()
-        .forEach(function (v) {
-          group.appendChild(makeChip(v, prefix + v));
-        });
-      return group;
-    }
-
-    var resetBtn = document.createElement("button");
-    resetBtn.type = "button";
-    resetBtn.className = "glossary-filter__reset";
-    resetBtn.textContent = "전체 보기";
-    resetBtn.addEventListener("click", function () {
-      active.clear();
-      bar.querySelectorAll(".glossary-filter__chip--active").forEach(function (c) {
-        c.classList.remove("glossary-filter__chip--active");
-      });
-      applyFilter();
-    });
-
-    bar.appendChild(makeGroup("카테고리", categories, "cat:"));
-    bar.appendChild(makeGroup("태그", tags, "tag:"));
-    bar.appendChild(resetBtn);
-    bar.appendChild(countEl);
-
-    table.parentNode.insertBefore(bar, table);
-    applyFilter();
+    return { indexTable: indexTable, termsTable: termsTable };
   }
 
   function init() {
-    document.querySelectorAll("article table").forEach(buildFilter);
+    var found = findTables();
+    if (!found.indexTable || !found.termsTable) return;
+
+    var indexTable = found.indexTable;
+    var termsTable = found.termsTable;
+
+    var termHeaders = Array.prototype.map.call(termsTable.querySelectorAll("thead th"), textOf);
+    var categoryIdx = termHeaders.indexOf("Category");
+    var termRows = Array.prototype.slice.call(termsTable.querySelectorAll("tbody tr"));
+    var indexRows = Array.prototype.slice.call(indexTable.querySelectorAll("tbody tr"));
+    if (!termRows.length || !indexRows.length) return;
+
+    var counts = {};
+    termRows.forEach(function (row) {
+      var cat = textOf(row.children[categoryIdx]);
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+
+    var hint = document.createElement("p");
+    hint.className = "glossary-filter__hint";
+    hint.innerHTML =
+      "<em>카테고리를 클릭하면 아래 용어 표가 그 카테고리만 보이도록 좁혀집니다. 다시 클릭하면 전체 보기로 돌아갑니다.</em>";
+    indexTable.parentNode.insertBefore(hint, indexTable);
+
+    var activeRow = null;
+    var activeCat = null;
+
+    function applyFilter() {
+      termRows.forEach(function (row) {
+        var cat = textOf(row.children[categoryIdx]);
+        row.style.display = !activeCat || cat === activeCat ? "" : "none";
+      });
+    }
+
+    indexRows.forEach(function (row) {
+      var cell = row.children[0];
+      var cat = textOf(cell);
+      var count = counts[cat] || 0;
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "glossary-filter__cat";
+      btn.textContent = cat;
+
+      var badge = document.createElement("span");
+      badge.className = "glossary-filter__badge";
+      badge.textContent = count;
+
+      cell.textContent = "";
+      cell.appendChild(btn);
+      cell.appendChild(badge);
+
+      btn.addEventListener("click", function () {
+        if (activeRow) {
+          activeRow.classList.remove("glossary-filter__row--active");
+        }
+        if (activeRow === row) {
+          activeRow = null;
+          activeCat = null;
+        } else {
+          activeRow = row;
+          activeCat = cat;
+          row.classList.add("glossary-filter__row--active");
+        }
+        applyFilter();
+      });
+    });
   }
 
   if (document.readyState === "loading") {
