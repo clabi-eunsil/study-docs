@@ -6,6 +6,7 @@ MLOps 관련 학습 내용을 정리한 문서 모음이다.
 ## 주제
 
 - [Model Serving](model-serving/README.md) — 모델 서빙 기본 개념부터 vLLM, Docker, Kubernetes, KServe 배포까지
+- [Kubeflow](kubeflow/README.md) — Kubeflow 컴포넌트별 실습 로드맵 (진행 중)
 
 ## 스터디 방법
 
