@@ -23,61 +23,38 @@
   }
 }
 
-/* 용어집 Category/Tags 클릭 필터 */
-.glossary-filter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.6rem;
-  margin: 1rem 0;
-  padding: 0.8rem;
-  background-color: var(--md-code-bg-color);
-  border-radius: 0.2rem;
-}
-
-.glossary-filter__group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.glossary-filter__label {
-  font-size: 0.7rem;
-  font-weight: 700;
+/* 용어집 카테고리 인덱스 표를 클릭하면 아래 용어 표를 필터링한다 */
+.glossary-filter__hint {
+  font-size: 0.75rem;
   color: var(--md-default-fg-color--light);
-  margin-right: 0.2rem;
 }
 
-.glossary-filter__chip,
-.glossary-filter__reset {
-  font-size: 0.7rem;
-  line-height: 1.6;
-  padding: 0.1rem 0.6rem;
-  border: 1px solid var(--md-default-fg-color--lightest);
-  border-radius: 1rem;
-  background-color: var(--md-default-bg-color);
-  color: var(--md-default-fg-color);
+.glossary-filter__cat {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--md-accent-fg-color);
   cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.glossary-filter__chip:hover,
-.glossary-filter__reset:hover {
-  border-color: var(--md-accent-fg-color);
-}
-
-.glossary-filter__chip--active {
-  background-color: var(--md-accent-fg-color);
-  border-color: var(--md-accent-fg-color);
-  color: var(--md-accent-bg-color);
-}
-
-.glossary-filter__reset {
-  font-weight: 700;
-}
-
-.glossary-filter__count {
-  margin-left: auto;
-  font-size: 0.7rem;
+.glossary-filter__badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.65rem;
+  border-radius: 1rem;
+  background-color: var(--md-default-fg-color--lightest);
   color: var(--md-default-fg-color--light);
+}
+
+tr.glossary-filter__row--active {
+  background-color: var(--md-typeset-mark-color);
+}
+
+tr.glossary-filter__row--active .glossary-filter__cat {
+  font-weight: 700;
 }
