@@ -4,6 +4,12 @@ repo_url: https://github.com/clabi-eunsil/study-docs
 docs_dir: docs
 copyright: 개인 학습 목적으로 정리한 자료입니다. 출처를 밝히지 않은 무단 재배포를 금합니다.
 
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/glossary-filter.js
+
 theme:
   name: material
   language: ko
