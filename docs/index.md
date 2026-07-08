@@ -12,7 +12,8 @@ MLOps 관련 학습 내용을 정리한 문서 모음이다.
 여기 정리된 문서는 원본 study repo의 내용을 빌드 시점에 가져온 것이다. 스크립트를 직접 돌려보고 싶거나
 오탈자·개선할 내용을 발견하면 원본 repo를 clone해서 실행하고, Issue나 PR로 기여할 수 있다.
 
-- [model-serving-study](https://github.com/clabi-eunsil/model-serving-study) — 각 챕터 README의 실행 환경 안내(`.venv` 구성 등)를 따라 실습
+clone부터 챕터별 실행 환경(`.venv`, Docker, Kubernetes) 구성까지 단계별로 정리한
+[실습 환경 구성 가이드](getting-started.md)를 참고한다.
 
 ## 저작권 안내
 
