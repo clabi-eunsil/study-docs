@@ -3,19 +3,39 @@ site_url: https://clabi-eunsil.github.io/study-docs/
 repo_url: https://github.com/clabi-eunsil/study-docs
 docs_dir: docs
 
-nav:
-  - Home: index.md
-  - Model Serving:
-      - Overview: model-serving/README.md
-      - Glossary: model-serving/GLOSSARY.md
-      - 1. 모델 서빙 기본 개념: model-serving/chapters/01-basic-concepts/README.md
-      - 2. 로컬 FastAPI 모델 서빙: model-serving/chapters/02-fastapi-serving/README.md
-      - 3. Docker 기반 모델 서빙: model-serving/chapters/03-docker-serving/README.md
-      - 4. vLLM 입문: model-serving/chapters/04-vllm-intro/README.md
-      - 5. vLLM 성능 튜닝: model-serving/chapters/05-vllm-performance-tuning/README.md
-      - 6. NVIDIA NIM: model-serving/chapters/06-nvidia-nim/README.md
-      - 7. 성능 테스트 방법론: model-serving/chapters/07-performance-methodology/README.md
-      - 8. 모델 서빙 관측성: model-serving/chapters/08-serving-observability/README.md
-      - 9. Langfuse와 LLM Observability: model-serving/chapters/09-langfuse-observability/README.md
-      - 10. Kubernetes 기반 모델 배포: model-serving/chapters/10-kubernetes-model-deployment/README.md
-      - 11. KServe 입문: model-serving/chapters/11-kserve-intro/README.md
+theme:
+  name: material
+  language: ko
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - search.suggest
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+
+plugins:
+  - search

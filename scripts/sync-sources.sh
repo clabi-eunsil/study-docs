@@ -17,10 +17,15 @@ while IFS='|' read -r name url nav_title; do
 
   rm -rf "$target"
   mkdir -p "$target"
-  cp -r "$clone_dir/chapters" "$target/chapters" 2>/dev/null || true
-  cp -r "$clone_dir/assets" "$target/assets" 2>/dev/null || true
+  rsync -a \
+    --exclude='.venv/' --exclude='__pycache__/' --exclude='node_modules/' \
+    --exclude='.git/' --exclude='*.pyc' \
+    "$clone_dir/chapters" "$target/" 2>/dev/null || true
+  rsync -a "$clone_dir/assets" "$target/" 2>/dev/null || true
   [[ -f "$clone_dir/GLOSSARY.md" ]] && cp "$clone_dir/GLOSSARY.md" "$target/GLOSSARY.md"
   [[ -f "$clone_dir/README.md" ]] && cp "$clone_dir/README.md" "$target/README.md"
 
   echo "synced $name <- $url"
 done < "$ROOT_DIR/sources.txt"
+
+python3 "$ROOT_DIR/scripts/wrap_code_files.py" "$DOCS_DIR"
