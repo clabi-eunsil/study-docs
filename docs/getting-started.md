@@ -43,7 +43,7 @@ deactivate
 (예: NVIDIA Container Toolkit이 필요한 GPU container, NGC API key가
 필요한 NIM, minikube/kubectl이 필요한 Kubernetes·KServe 챕터)
 
-## 3. 정확한 실행 명령은 각 챕터 페이지에
+## 3. 챕터별 세부 실행 명령 확인
 
 필요한 API key(NGC, Hugging Face 등), GPU 요구사항, 정확한 실행 순서는 각 챕터 페이지 상단에
 정리되어 있다. 실습을 시작하기 전에 해당 챕터를 먼저 읽는다.
