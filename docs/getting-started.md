@@ -37,9 +37,10 @@ deactivate
 
 ### Docker / Kubernetes / KServe 챕터
 
-실행 환경이 container나 cluster 안에 있는 챕터는 host에 `.venv`를 만들 필요가 없다.
+실행 환경이 container나 cluster 안에 있는 챕터는 host에 `.venv`를 만들 필요가 없다.  
 대신 해당 챕터 README에 안내된 `docker build` / `docker compose up`, `kubectl apply` 같은
-명령을 그대로 따라가면 된다. (예: NVIDIA Container Toolkit이 필요한 GPU container, NGC API key가
+명령을 그대로 따라가면 된다.   
+(예: NVIDIA Container Toolkit이 필요한 GPU container, NGC API key가
 필요한 NIM, minikube/kubectl이 필요한 Kubernetes·KServe 챕터)
 
 ## 3. 정확한 실행 명령은 각 챕터 페이지에
