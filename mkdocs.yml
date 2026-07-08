@@ -2,6 +2,7 @@ site_name: MLOps Study Docs
 site_url: https://clabi-eunsil.github.io/study-docs/
 repo_url: https://github.com/clabi-eunsil/study-docs
 docs_dir: docs
+copyright: 개인 학습 목적으로 정리한 자료입니다. 출처를 밝히지 않은 무단 재배포를 금합니다.
 
 theme:
   name: material
@@ -36,6 +37,7 @@ markdown_extensions:
       anchor_linenums: true
   - pymdownx.superfences
   - pymdownx.inlinehilite
+  - pymdownx.magiclink
 
 plugins:
   - search
