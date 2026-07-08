@@ -49,10 +49,14 @@ LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)\s]+)\)")
 LIST_MARKER_RE = re.compile(r"^(\s*)((?:\d+[.)]|[-*+])\s+)")
 
 
+BLOCK_START_RE = re.compile(r"^(\s*)(#|>|```|~~~)")
+
+
 def block_end_line(lines: list[str], start: int) -> int:
-    """start가 표 또는 목록 항목 줄이면, 그 표/목록 전체가 끝나는 줄
-    인덱스를 찾는다(중간에 접이식 블록을 끼워 넣으면 표가 깨지거나
-    번호 매기기가 끊기므로, 블록 전체가 끝난 뒤에 끼워 넣기 위함)."""
+    """start가 표/목록/문단 중 어디에 속하든, 그 블록 전체가 끝나는 줄
+    인덱스를 찾는다(중간에 접이식 블록을 끼워 넣으면 표가 깨지거나 번호
+    매기기가 끊기거나 문단 문장이 잘리므로, 블록 전체가 끝난 뒤에
+    끼워 넣기 위함)."""
     line = lines[start]
     if line.lstrip().startswith("|"):
         end = start
@@ -60,27 +64,37 @@ def block_end_line(lines: list[str], start: int) -> int:
             end += 1
         return end
 
-    if not LIST_MARKER_RE.match(line):
-        return start
+    if LIST_MARKER_RE.match(line):
+        end = start
+        i = start + 1
+        while i < len(lines):
+            cur = lines[i]
+            if cur.strip() == "":
+                j = i + 1
+                while j < len(lines) and lines[j].strip() == "":
+                    j += 1
+                if j < len(lines) and (LIST_MARKER_RE.match(lines[j]) or lines[j].startswith((" ", "\t"))):
+                    end = j
+                    i = j + 1
+                    continue
+                break
+            if LIST_MARKER_RE.match(cur) or cur.startswith((" ", "\t")):
+                end = i
+                i += 1
+                continue
+            break
+        return end
 
+    # 일반 문단: 마크다운은 빈 줄이 없으면 줄바꿈만 된 다음 줄도 같은
+    # 문단으로 이어붙이므로, 빈 줄이나 다른 블록이 나올 때까지 스캔한다.
     end = start
     i = start + 1
     while i < len(lines):
         cur = lines[i]
-        if cur.strip() == "":
-            j = i + 1
-            while j < len(lines) and lines[j].strip() == "":
-                j += 1
-            if j < len(lines) and (LIST_MARKER_RE.match(lines[j]) or lines[j].startswith((" ", "\t"))):
-                end = j
-                i = j + 1
-                continue
+        if cur.strip() == "" or BLOCK_START_RE.match(cur) or LIST_MARKER_RE.match(cur):
             break
-        if LIST_MARKER_RE.match(cur) or cur.startswith((" ", "\t")):
-            end = i
-            i += 1
-            continue
-        break
+        end = i
+        i += 1
     return end
 
 
