@@ -58,3 +58,22 @@ tr.glossary-filter__row--active {
 tr.glossary-filter__row--active .glossary-filter__cat {
   font-weight: 700;
 }
+
+/* 창을 반만 띄우는 등 좁은 화면에서 표가 좌우로 스크롤되는 걸 알아채기
+   쉽도록, 기본(OS) 스크롤바 대신 항상 눈에 띄는 스크롤바를 쓴다. */
+.md-typeset table:not([class]) {
+  scrollbar-width: auto;
+}
+
+.md-typeset table:not([class])::-webkit-scrollbar {
+  height: 0.5rem;
+}
+
+.md-typeset table:not([class])::-webkit-scrollbar-track {
+  background-color: var(--md-default-fg-color--lightest);
+}
+
+.md-typeset table:not([class])::-webkit-scrollbar-thumb {
+  background-color: var(--md-default-fg-color--light);
+  border-radius: 0.25rem;
+}
