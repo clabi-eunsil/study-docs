@@ -46,6 +46,42 @@ LANG_BY_SUFFIX = {
 }
 
 LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)\s]+)\)")
+LIST_MARKER_RE = re.compile(r"^(\s*)((?:\d+[.)]|[-*+])\s+)")
+
+
+def block_end_line(lines: list[str], start: int) -> int:
+    """start가 표 또는 목록 항목 줄이면, 그 표/목록 전체가 끝나는 줄
+    인덱스를 찾는다(중간에 접이식 블록을 끼워 넣으면 표가 깨지거나
+    번호 매기기가 끊기므로, 블록 전체가 끝난 뒤에 끼워 넣기 위함)."""
+    line = lines[start]
+    if line.lstrip().startswith("|"):
+        end = start
+        while end + 1 < len(lines) and lines[end + 1].lstrip().startswith("|"):
+            end += 1
+        return end
+
+    if not LIST_MARKER_RE.match(line):
+        return start
+
+    end = start
+    i = start + 1
+    while i < len(lines):
+        cur = lines[i]
+        if cur.strip() == "":
+            j = i + 1
+            while j < len(lines) and lines[j].strip() == "":
+                j += 1
+            if j < len(lines) and (LIST_MARKER_RE.match(lines[j]) or lines[j].startswith((" ", "\t"))):
+                end = j
+                i = j + 1
+                continue
+            break
+        if LIST_MARKER_RE.match(cur) or cur.startswith((" ", "\t")):
+            end = i
+            i += 1
+            continue
+        break
+    return end
 
 
 def guess_lang(path: Path) -> str:
@@ -140,7 +176,9 @@ def process_source(source_dir: Path, git_url: str) -> None:
     for md_file in sorted(source_dir.rglob("*.md")):
         text = md_file.read_text(encoding="utf-8")
         seen: dict[Path, str] = {}
-        appendix: list[tuple[str, str, Path]] = []
+        order: list[Path] = []
+        first_prose_line: dict[Path, int] = {}
+        first_table_line: dict[Path, int] = {}
 
         def repl(m: re.Match) -> str:
             label, target = m.group(1), m.group(2)
@@ -165,31 +203,49 @@ def process_source(source_dir: Path, git_url: str) -> None:
                 return m.group(0)
 
             if resolved not in seen:
-                anchor = slug_for(resolved.relative_to(source_root).as_posix())
-                seen[resolved] = anchor
-                rel_display = Path(os.path.relpath(resolved, md_file.parent)).as_posix()
-                appendix.append((rel_display, anchor, resolved))
+                seen[resolved] = slug_for(resolved.relative_to(source_root).as_posix())
+                order.append(resolved)
+
+            # 표 안 셀에는 접이식 블록을 못 끼워 넣으므로, 표가 아닌 첫 등장
+            # 위치를 따로 기억해 둔다(표에만 등장하면 표 바로 뒤에 끼워 넣는다).
+            line_idx = text.count("\n", 0, m.start())
+            line_start = text.rfind("\n", 0, m.start()) + 1
+            line_end = text.find("\n", m.start())
+            line_end = len(text) if line_end == -1 else line_end
+            if text[line_start:line_end].lstrip().startswith("|"):
+                first_table_line.setdefault(resolved, line_idx)
+            else:
+                first_prose_line.setdefault(resolved, line_idx)
+
             return f"[{label}](#{seen[resolved]})"
 
         new_text = LINK_RE.sub(repl, text)
 
-        if appendix:
-            blocks = [new_text.rstrip("\n"), "", "---", "", "## 코드 보기", ""]
-            for rel_display, anchor, resolved in appendix:
-                try:
-                    content = resolved.read_text(encoding="utf-8")
-                except (UnicodeDecodeError, OSError):
-                    continue
-                lang = guess_lang(resolved)
-                fence = fence_for(content)
-                fenced = "\n".join([f"{fence}{lang}", *content.splitlines(), fence])
-                indented = "\n".join(("    " + line if line else "") for line in fenced.splitlines())
-                blocks.append(f'<a id="{anchor}"></a>')
-                blocks.append(f'??? note "{rel_display}"')
-                blocks.append(indented)
-                blocks.append("")
-                to_delete.add(resolved)
-            new_text = "\n".join(blocks) + "\n"
+        if order:
+            new_lines = new_text.split("\n")
+            insertions: dict[int, list[Path]] = {}
+            for resolved in order:
+                start_line = first_prose_line.get(resolved, first_table_line.get(resolved))
+                target_line = block_end_line(new_lines, start_line)
+                insertions.setdefault(target_line, []).append(resolved)
+
+            for line_idx in sorted(insertions, reverse=True):
+                block: list[str] = []
+                for resolved in insertions[line_idx]:
+                    try:
+                        content = resolved.read_text(encoding="utf-8")
+                    except (UnicodeDecodeError, OSError):
+                        continue
+                    rel_display = Path(os.path.relpath(resolved, md_file.parent)).as_posix()
+                    lang = guess_lang(resolved)
+                    fence = fence_for(content)
+                    fenced = "\n".join([f"{fence}{lang}", *content.splitlines(), fence])
+                    admonition_body = ["    " + line if line else "" for line in fenced.splitlines()]
+                    block += ["", f'<a id="{seen[resolved]}"></a>', f'??? note "{rel_display}"', *admonition_body]
+                    to_delete.add(resolved)
+                new_lines[line_idx + 1:line_idx + 1] = block
+
+            new_text = "\n".join(new_lines)
 
         if new_text != text:
             md_file.write_text(new_text, encoding="utf-8")
