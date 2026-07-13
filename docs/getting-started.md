@@ -57,3 +57,4 @@ deactivate
 실습하다가 오탈자나 개선할 내용을 발견하면 원본 repo에 Issue를 남기거나, 직접 고쳐서 PR을 보내면 된다.
 
 - [model-serving-study](https://github.com/clabi-eunsil/model-serving-study)
+- [kubeflow-study](https://github.com/clabi-eunsil/kubeflow-study)
