@@ -47,6 +47,8 @@ LANG_BY_SUFFIX = {
 
 LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)\s]+)\)")
 LIST_MARKER_RE = re.compile(r"^(\s*)((?:\d+[.)]|[-*+])\s+)")
+FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
+TOKEN_STRIP = ".,;:'\")]}"
 
 
 BLOCK_START_RE = re.compile(r"^(\s*)(#|>|```|~~~)")
@@ -96,6 +98,49 @@ def block_end_line(lines: list[str], start: int) -> int:
         end = i
         i += 1
     return end
+
+
+def find_fenced_mentions(
+    lines: list[str], md_dir: Path, source_root: Path
+) -> dict[Path, int]:
+    """```bash ... ``` 같은 코드펜스 안에 마크다운 링크 없이 평문으로만
+    적힌 파일 경로(예: `bash scripts/foo.sh`)를 찾는다. 펜스 내부 텍스트는
+    실행 명령 그대로 유지해야 하므로 건드리지 않고, 그 펜스가 끝나는 줄
+    번호만 파일별로 기록해서 반환한다(접이식 블록을 펜스 뒤에 붙이기 위함)."""
+    mentions: dict[Path, int] = {}
+    i, n = 0, len(lines)
+    while i < n:
+        m = FENCE_RE.match(lines[i].lstrip())
+        if not m:
+            i += 1
+            continue
+        fence_char, fence_len = m.group(1)[0], len(m.group(1))
+        close = None
+        for j in range(i + 1, n):
+            stripped = lines[j].strip()
+            if stripped and set(stripped) == {fence_char} and len(stripped) >= fence_len:
+                close = j
+                break
+        if close is None:
+            break  # 안 닫힌 펜스는 더 진행하지 않는다
+
+        for k in range(i + 1, close):
+            for raw_token in lines[k].split():
+                token = raw_token.strip(TOKEN_STRIP)
+                if not token or token.startswith(("http://", "https://", "-", "$")):
+                    continue
+                candidate = (md_dir / token).resolve()
+                if not candidate.is_file():
+                    continue
+                try:
+                    candidate.relative_to(source_root)
+                except ValueError:
+                    continue
+                if candidate.suffix in SKIP_SUFFIXES:
+                    continue
+                mentions.setdefault(candidate, close)
+        i = close + 1
+    return mentions
 
 
 def guess_lang(path: Path) -> str:
@@ -193,6 +238,7 @@ def process_source(source_dir: Path, git_url: str) -> None:
         order: list[Path] = []
         first_prose_line: dict[Path, int] = {}
         first_table_line: dict[Path, int] = {}
+        direct_insert_line: dict[Path, int] = {}
 
         def repl(m: re.Match) -> str:
             label, target = m.group(1), m.group(2)
@@ -234,13 +280,23 @@ def process_source(source_dir: Path, git_url: str) -> None:
             return f"[{label}](#{seen[resolved]})"
 
         new_text = LINK_RE.sub(repl, text)
+        new_lines = new_text.split("\n")
+
+        for resolved, close_line in find_fenced_mentions(new_lines, md_file.parent, source_root).items():
+            if resolved in seen:
+                continue  # 이미 마크다운 링크로 잡힌 파일이면 그쪽 위치를 우선한다
+            seen[resolved] = slug_for(resolved.relative_to(source_root).as_posix())
+            order.append(resolved)
+            direct_insert_line[resolved] = close_line
 
         if order:
-            new_lines = new_text.split("\n")
             insertions: dict[int, list[Path]] = {}
             for resolved in order:
-                start_line = first_prose_line.get(resolved, first_table_line.get(resolved))
-                target_line = block_end_line(new_lines, start_line)
+                if resolved in direct_insert_line:
+                    target_line = direct_insert_line[resolved]
+                else:
+                    start_line = first_prose_line.get(resolved, first_table_line.get(resolved))
+                    target_line = block_end_line(new_lines, start_line)
                 insertions.setdefault(target_line, []).append(resolved)
 
             for line_idx in sorted(insertions, reverse=True):
